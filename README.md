@@ -15,8 +15,8 @@ This solution uses the following AWS services:
 
 ## Prerequsites 
 
-1.      You have an AWS Control Tower landing zone deployed in your account.  You can refer to the AWS Control Tower User Guide on getting started.
-2.      To implement this solution, you must log in as the AWS Control Tower administrator into the organization master account in the AWS Region where you launched AWS Control Tower.
+1. You have an AWS Control Tower landing zone deployed in your account.  You can refer to the AWS Control Tower User Guide on getting started.
+2. To implement this solution, you must log in as the AWS Control Tower administrator into the organization master account in the AWS Region where you launched AWS Control Tower.
 
 
 ## Solution Overview
