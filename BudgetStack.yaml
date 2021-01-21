@@ -1,0 +1,32 @@
+Description: "Basic Budget 100$"
+Resources:
+  BudgetBase:
+    Type: "AWS::Budgets::Budget"
+    Properties:
+      Budget:
+        BudgetLimit:
+          Amount: 100
+          Unit: USD
+        TimeUnit: MONTHLY
+        TimePeriod:
+          Start: 1225864800
+          End: 1926864800
+        BudgetType: COST
+      NotificationsWithSubscribers:
+        - Notification:
+            NotificationType: ACTUAL
+            ComparisonOperator: GREATER_THAN
+            Threshold: 99
+          Subscribers:
+            - SubscriptionType: EMAIL
+              Address: ali.bajwa@capgemini.com
+        - Notification:
+            NotificationType: ACTUAL
+            ComparisonOperator: GREATER_THAN
+            Threshold: 80
+          Subscribers:
+          - SubscriptionType: EMAIL
+            Address: ali.bajwa@capgemini.com
+Outputs:
+  BudgetId:
+    Value: !Ref BudgetBase
