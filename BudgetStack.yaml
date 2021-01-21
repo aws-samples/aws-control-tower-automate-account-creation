@@ -1,4 +1,4 @@
-Description: "Basic Budget 100$"
+Description: "Basic Budget 100$, 50/75/99 percent thresholds."
 Parameters:
   AdminEmail:
     Description: 'Email address of the Administrator'
