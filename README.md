@@ -13,6 +13,13 @@ This solution uses the following AWS services:
 * [AWS Lambda](https://aws.amazon.com/lambda/)
 * [Amazon DynamoDB](https://aws.amazon.com/dynamodb/)
 
+## TLDR
+
+1. Upload a CSV file with the exact same headers as sample.csv into an S3 bucket in the region you will deploy the solution.
+2. Set the URL for the uploaded CSV file in the URLForInputCSVFile parameter in the BatchAccountCreation.yaml file.
+3. Set your OU and AdminEmail parameters in the BatchAccountCreation.yaml file. (The OU parameter here is for the budget stack set ONLY.)
+4. Deploy the BatchAccountCreation.yaml file in AWS CloudFormation.
+
 ## Prerequsites 
 
 1. You have an AWS Control Tower landing zone deployed in your account.  You can refer to the AWS Control Tower User Guide on getting started.
