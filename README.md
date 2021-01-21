@@ -15,7 +15,7 @@ This solution uses the following AWS services:
 
 ## TLDR
 
-1. Upload a CSV file with the exact same headers as sample.csv into an S3 bucket in the region you will deploy the solution.
+1. Upload a sample.csv file with the exact same headers as sample.csv into an S3 bucket in the region you will deploy the solution.
 2. Set the URL for the uploaded CSV file in the URLForInputCSVFile parameter in the BatchAccountCreation.yaml file.
 3. Set your OU and AdminEmail parameters in the BatchAccountCreation.yaml file. (The OU parameter here is for the budget stack set ONLY.)
 4. Deploy the BatchAccountCreation.yaml file in AWS CloudFormation.
