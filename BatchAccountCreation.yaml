@@ -2,7 +2,7 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: Control Tower Batch Account Creation (fdp-1p4ekfxow)
 Parameters:
   URLForInputCSVFile:
-    Default: 'https://github.com/aws-samples/aws-control-tower-automate-account-creation/blob/master/sample.csv'
+    Default: 'https://cf-templates-1rfdt6bal1l72-eu-west-2.s3.amazonaws.com/sample.csv'
     Description: URL for Batch Account Creation CSV file.
     NoEcho: 'false'
     Type: String
@@ -11,6 +11,9 @@ Parameters:
     Default: 'ou-h1w5-gavt86rs'
     Description: The ID (not name) of the OU in which the newly created accounts will be vended. The budget stack set will create stack instances for all account within the specified OU.
     Type: String
+  AdminEmail:
+    Type: String
+    Description: 'Email address of the Administrator'
 
 Mappings:
   S3perRegion:
@@ -248,7 +251,7 @@ Resources:
         RetainStacksOnAccountRemoval: True
       PermissionModel: SERVICE_MANAGED
       StackSetName: BaselineBudget
-      TemplateBody: |
+      TemplateBody: !Sub |
         Description: "Basic Budget 100$"
         Resources:
           BudgetBase:
@@ -270,14 +273,14 @@ Resources:
                     Threshold: 99
                   Subscribers:
                     - SubscriptionType: EMAIL
-                      Address: ali.bajwa@capgemini.com
+                      Address: !Sub ${AdminEmail}
                 - Notification:
                     NotificationType: ACTUAL
                     ComparisonOperator: GREATER_THAN
                     Threshold: 80
                   Subscribers:
                   - SubscriptionType: EMAIL
-                    Address: ali.bajwa@capgemini.com
+                    Address: !Sub ${AdminEmail}
         Outputs:
           BudgetId:
             Value: !Ref BudgetBase
