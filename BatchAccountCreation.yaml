@@ -2,11 +2,15 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: Control Tower Batch Account Creation (fdp-1p4ekfxow)
 Parameters:
   URLForInputCSVFile:
-    Default: 'https://marketplace-sa-resources-ct-us-east-1.s3.amazonaws.com/sample.csv'
+    Default: 'https://github.com/aws-samples/aws-control-tower-automate-account-creation/blob/master/sample.csv'
     Description: URL for Batch Account Creation CSV file.
     NoEcho: 'false'
     Type: String
     AllowedPattern: ^[a-zA-Z0-9-.\\:\/]*.csv$
+  OrganizationalUnitId:
+    Default: 'ou-h1w5-gavt86rs'
+    Description: The ID (not name) of the OU in which the newly created accounts will be vended. The budget stack set will create stack instances for all account within the specified OU.
+    Type: String
 
 Mappings:
   S3perRegion:
@@ -20,6 +24,8 @@ Mappings:
       NAME: marketplace-sa-resources-ct-eu-west-1
     ap-southeast-2:
       NAME: marketplace-sa-resources-ct-ap-southeast-2
+    eu-west-2:
+      NAME: cf-templates-1rfdt6bal1l72-eu-west-2
 
 Resources:
   NewAccountDetailsTable:
@@ -102,6 +108,8 @@ Resources:
       - NewAccountHandlerPolicy
   NewAccountHandlerTriggerLambda:
     Type: 'Custom::AccountHandler'
+    DependsOn:
+      - NewAccountHandlerLambda
     Properties:
       ServiceToken: !GetAtt "NewAccountHandlerLambda.Arn"
   CreateManagedAccountLambda:
@@ -225,6 +233,54 @@ Resources:
         - CreateManagedAccountLambda
         - Arn
       StartingPosition: LATEST
+  BudgetStackSet:
+    Type: AWS::CloudFormation::StackSet
+    Properties: 
+      Description: Deploys a Stack Set which auto deploys a Budgets configuration to the selected OU.
+      StackInstancesGroup:
+        - DeploymentTargets: 
+            OrganizationalUnitIds:
+              - !Ref "OrganizationalUnitId"
+          Regions: 
+            - !Sub ${AWS::Region}
+      AutoDeployment: 
+        Enabled: True
+        RetainStacksOnAccountRemoval: True
+      PermissionModel: SERVICE_MANAGED
+      StackSetName: BaselineBudget
+      TemplateBody: |
+        Description: "Basic Budget 100$"
+        Resources:
+          BudgetBase:
+            Type: "AWS::Budgets::Budget"
+            Properties:
+              Budget:
+                BudgetLimit:
+                  Amount: 100
+                  Unit: USD
+                TimeUnit: MONTHLY
+                TimePeriod:
+                  Start: 1225864800
+                  End: 1926864800
+                BudgetType: COST
+              NotificationsWithSubscribers:
+                - Notification:
+                    NotificationType: ACTUAL
+                    ComparisonOperator: GREATER_THAN
+                    Threshold: 99
+                  Subscribers:
+                    - SubscriptionType: EMAIL
+                      Address: ali.bajwa@capgemini.com
+                - Notification:
+                    NotificationType: ACTUAL
+                    ComparisonOperator: GREATER_THAN
+                    Threshold: 80
+                  Subscribers:
+                  - SubscriptionType: EMAIL
+                    Address: ali.bajwa@capgemini.com
+        Outputs:
+          BudgetId:
+            Value: !Ref BudgetBase
 
 Outputs:
   DynamoDBTableWithAccountInformation:
