@@ -239,7 +239,7 @@ Resources:
   BudgetStackSet:
     Type: AWS::CloudFormation::StackSet
     Properties: 
-      Description: Deploys a Stack Set which auto deploys a Budgets configuration to the selected OU.
+      Description: Deploys a Stack Set which auto deploys a Budgets configuration to all accounts in the Organizational unit.
       StackInstancesGroup:
         - DeploymentTargets: 
             OrganizationalUnitIds:
