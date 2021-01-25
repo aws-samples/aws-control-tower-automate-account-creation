@@ -15,6 +15,13 @@ Parameters:
   S3BucketName:
     Type: String
     Description: 'The S3 Bucket with all the files for your deployment.'
+  ApiGatewayName:
+    Type: String
+    Default: my-api
+  lambdaFunctionName:
+    Type: String
+    AllowedPattern: "[a-zA-Z0-9]+[a-zA-Z0-9-]+[a-zA-Z0-9]+"
+    Default: my-function
 
 Resources:
   NewAccountDetailsTable:
@@ -90,24 +97,6 @@ Resources:
           BATCH_ACCT_INPUT:
             Ref: URLForInputCSVFile
       Timeout: 300
-    DependsOn:
-      - NewAccountHandlerPolicy
-  SignUpHandlerLambda:
-    Type: AWS::Lambda::Function
-    Properties:
-      Code:
-        S3Bucket: !Sub ${S3BucketName}
-        S3Key: sign_up_lambda.zip
-      Handler: new_account_handler.account_handler
-      Role:
-        Fn::GetAtt:
-          - NewAccountHandlerLambdaExecutionRole
-          - Arn
-      Runtime: python3.7
-      Environment:
-        Variables:
-          TABLE_NAME:
-            Ref: NewAccountDetailsTable
     DependsOn:
       - NewAccountHandlerPolicy
   NewAccountHandlerTriggerLambda:
@@ -237,6 +226,92 @@ Resources:
         - CreateManagedAccountLambda
         - Arn
       StartingPosition: LATEST
+  ApiGateway:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Description: Example API Gateway
+      ApiKeySourceType: HEADER
+      EndpointConfiguration:
+        Types:
+          - EDGE
+      Name: !Ref ApiGatewayName
+  ApiGatewayRootMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: NONE
+      HttpMethod: POST
+      Integration:
+        IntegrationHttpMethod: POST
+        Type: AWS_PROXY
+        Uri: !Sub
+          - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${lambdaArn}/invocations
+          - lambdaArn: !GetAtt SignUpLambdaFunction.Arn
+      ResourceId: !GetAtt ApiGateway.RootResourceId
+      RestApiId: !Ref ApiGateway
+  ApiGatewayDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn:
+      - ApiGatewayRootMethod
+    Properties:
+      RestApiId: !Ref ApiGateway
+      StageName: call
+
+  SignUpLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket: !Sub ${S3BucketName}
+        S3Key: sign_up_lambda.zip
+      Description: Example Lambda function
+      FunctionName: !Ref lambdaFunctionName
+      Handler: index.handler
+      MemorySize: 128
+      Role: !GetAtt LambdaIAMRole.Arn
+      Runtime: python3.8
+      Environment:
+        Variables:
+          TABLE_NAME:
+            Ref: NewAccountDetailsTable
+          PRINCIPAL_ARN: !GetAtt "CreateManagedAccountLambdaRole.Arn"
+
+  LambdaApiGatewayInvoke:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt SignUpLambdaFunction.Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/call/POST/
+  LambdaIAMRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action:
+              - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+      Policies:
+        - PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                  - dynamodb:PutItem
+                  - dynamodb:GetItem
+                Effect: Allow
+                Resource:
+                  - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${lambdaFunctionName}:*
+          PolicyName: SignUpLambdaPolicy
+  LambdaLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${lambdaFunctionName}
+      RetentionInDays: 90
   BudgetStackSet:
     Type: AWS::CloudFormation::StackSet
     Properties: 
