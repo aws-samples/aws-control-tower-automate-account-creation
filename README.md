@@ -15,8 +15,8 @@ This solution uses the following AWS services:
 
 ## TLDR
 
-1. Upload the .zip files from the functions folder into a s3 bucket in your region of deployment. The bucket name should then be updated in the mappings section of the main template.
-2. Upload a sample.csv file with the exact same headers as sample.csv into an S3 bucket in the region you will deploy the solution.
+1. Upload the .zip files from the functions folder into a s3 bucket in your region of deployment. The bucket name should be used as a parameter.
+2. Upload a sample.csv file with the exact same headers as sample.csv into the same S3 bucket.
 3. Set the URL for the uploaded CSV file in the URLForInputCSVFile parameter in the BatchAccountCreation.yaml file.
 4. Set your OU and AdminEmail parameters in the BatchAccountCreation.yaml file. (The OU parameter here is for the budget stack set ONLY.)
 5. Deploy the BatchAccountCreation.yaml file in AWS CloudFormation.
