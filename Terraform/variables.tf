@@ -3,7 +3,6 @@ locals {
   prefix = "${var.env}_makyr"
 
 }
-
 variable "env" {
   type = string
   default = "dev"
