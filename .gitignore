@@ -1,1 +1,4 @@
 notes.txt
+Terraform/.terraform/terraform.tfstate
+Terraform/main.tf
+Terraform/.terraform/providers/registry.terraform.io/hashicorp/aws/3.25.0/windows_amd64/terraform-provider-aws_v3.25.0_x5.exe
