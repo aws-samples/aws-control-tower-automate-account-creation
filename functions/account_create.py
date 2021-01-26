@@ -383,7 +383,7 @@ def process_dynamodb_event(event):
     result = False
     event_name = event['Records'][0]['eventName']
 
-    if event_name != 'INSERT':
+    if event_name == 'INSERT':
         LOGGER.info('DynamoDB Event Recieved: %s', event)
         result = True
     else:
