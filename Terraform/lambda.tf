@@ -15,3 +15,11 @@ resource "aws_lambda_function" "account_creation" {
   handler = "account_creation.lambda_handler"
   runtime = "python3.8"
 }
+
+resource "aws_lambda_permission" "invoke_signup_validation" {
+  statement_id = "AllowSignupAPItoInvoke"
+  action = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.signup_validation.function_name
+  principal = "apigateway.amazonaws.com"
+  source_arn = "${aws_api_gateway_rest_api.signup_form_api.execution_arn}/*/*/*"
+}
