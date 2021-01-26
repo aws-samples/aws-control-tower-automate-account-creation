@@ -1,27 +1,30 @@
-AWSTemplateFormatVersion: '2010-09-09'
+AWSTemplateFormatVersion: "2010-09-09"
 Description: Control Tower Batch Account Creation (fdp-1p4ekfxow)
 Parameters:
   URLForInputCSVFile:
     Description: URL for Batch Account Creation CSV file.
-    NoEcho: 'false'
+    NoEcho: "false"
     Type: String
+    Default: https://aws-cis-pe-training-accounts.s3.eu-west-2.amazonaws.com/sample.csv
     AllowedPattern: ^[a-zA-Z0-9-.\\:\/]*.csv$
   OrganizationalUnitIds:
-    Description: 'The ID (not name) of the OUs in which the budget stack set will create stack instances for all accounts therein.'
+    Description: "The ID (not name) of the OUs in which the budget stack set will create stack instances for all accounts therein."
     Type: String
+    Default: ou-h1w5-gavt86rs
   AdminEmail:
     Type: String
-    Description: 'Email address of the Administrator'
+    Description: "Email address of the Administrator"
   S3BucketName:
     Type: String
-    Description: 'The S3 Bucket with all the files for your deployment.'
+    Default: aws-cis-pe-training-accounts
+    Description: "The S3 Bucket with all the files for your deployment."
   ApiGatewayName:
     Type: String
-    Default: my-api
+    Default: Sign-Up-Api-Gateway
   lambdaFunctionName:
     Type: String
     AllowedPattern: "[a-zA-Z0-9]+[a-zA-Z0-9-]+[a-zA-Z0-9]+"
-    Default: my-function
+    Default: Sign-Up-Handler
 
 Resources:
   NewAccountDetailsTable:
@@ -51,7 +54,7 @@ Resources:
               Service: lambda.amazonaws.com
         Version: "2012-10-17"
       ManagedPolicyArns:
-        - Fn::Sub: 'arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+        - Fn::Sub: "arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
   NewAccountHandlerPolicy:
     Type: AWS::IAM::Policy
     Properties:
@@ -76,7 +79,7 @@ Resources:
               - organizations:ListAccountsForParent
               - organizations:ListOrganizationalUnitsForParent
             Effect: Allow
-            Resource: '*'
+            Resource: "*"
         Version: "2012-10-17"
       PolicyName: NewAccountHandlerPolicy
       Roles:
@@ -100,7 +103,7 @@ Resources:
     DependsOn:
       - NewAccountHandlerPolicy
   NewAccountHandlerTriggerLambda:
-    Type: 'Custom::AccountHandler'
+    Type: "Custom::AccountHandler"
     DependsOn:
       - NewAccountHandlerLambda
     Properties:
@@ -120,10 +123,9 @@ Resources:
         Variables:
           TABLE_NAME:
             Ref: NewAccountDetailsTable
-          PRINCIPAL_ARN:
-            !GetAtt "CreateManagedAccountLambdaRole.Arn"
+          PRINCIPAL_ARN: !GetAtt "CreateManagedAccountLambdaRole.Arn"
   TargetLambdaTrigger:
-    Type: 'Custom::CreateAccount'
+    Type: "Custom::CreateAccount"
     DependsOn:
       - EventSourceMapping
     Properties:
@@ -139,7 +141,7 @@ Resources:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
-        Version: '2012-10-17'
+        Version: "2012-10-17"
         Statement:
           - Effect: Allow
             Principal:
@@ -154,40 +156,40 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
-                  - 'sso:GetProfile'
-                  - 'sso:CreateProfile'
-                  - 'sso:UpdateProfile'
-                  - 'sso:GetSSOStatus'
-                  - 'sso:GetTrust'
-                  - 'sso:CreateTrust'
-                  - 'sso:UpdateTrust'
-                  - 'sso:GetApplicationInstance'
-                  - 'sso:ListDirectoryAssociations'
-                  - 'sso:ListPermissionSets'
-                  - 'sso:AssociateProfile'
-                  - 'sso:GetPermissionSet'
-                  - 'sso:CreateApplicationInstance'
-                  - 'sso:ProvisionApplicationInstanceForAWSAccount'
-                  - 'sso:ProvisionApplicationProfileForAWSAccountInstance'
-                  - 'sso:ProvisionSAMLProvider'
-                  - 'sso:ListProfileAssociations'
-                  - 'sso-directory:ListMembersInGroup'
-                  - 'sso-directory:SearchGroups'
-                  - 'sso-directory:SearchGroupsWithGroupName'
-                  - 'sso-directory:SearchUsers'
-                  - 'sso-directory:CreateUser'
-                  - 'sso-directory:DescribeGroups'
-                  - 'sso-directory:DescribeDirectory'
-                  - 'sso-directory:GetUserPoolInfo'
-                  - 'controltower:CreateManagedAccount'
-                  - 'controltower:DescribeManagedAccount'
-                  - 'controltower:DeregisterManagedAccount'
-                  - 's3:GetObject'
-                  - 'organizations:describeOrganization'
-                  - 'sso:DescribeRegisteredRegions'
-                  - 'servicecatalog:DisassociatePrincipalFromPortfolio'
-                  - 'servicecatalog:AssociatePrincipalWithPortfolio'
-                Resource:  '*'
+                  - "sso:GetProfile"
+                  - "sso:CreateProfile"
+                  - "sso:UpdateProfile"
+                  - "sso:GetSSOStatus"
+                  - "sso:GetTrust"
+                  - "sso:CreateTrust"
+                  - "sso:UpdateTrust"
+                  - "sso:GetApplicationInstance"
+                  - "sso:ListDirectoryAssociations"
+                  - "sso:ListPermissionSets"
+                  - "sso:AssociateProfile"
+                  - "sso:GetPermissionSet"
+                  - "sso:CreateApplicationInstance"
+                  - "sso:ProvisionApplicationInstanceForAWSAccount"
+                  - "sso:ProvisionApplicationProfileForAWSAccountInstance"
+                  - "sso:ProvisionSAMLProvider"
+                  - "sso:ListProfileAssociations"
+                  - "sso-directory:ListMembersInGroup"
+                  - "sso-directory:SearchGroups"
+                  - "sso-directory:SearchGroupsWithGroupName"
+                  - "sso-directory:SearchUsers"
+                  - "sso-directory:CreateUser"
+                  - "sso-directory:DescribeGroups"
+                  - "sso-directory:DescribeDirectory"
+                  - "sso-directory:GetUserPoolInfo"
+                  - "controltower:CreateManagedAccount"
+                  - "controltower:DescribeManagedAccount"
+                  - "controltower:DeregisterManagedAccount"
+                  - "s3:GetObject"
+                  - "organizations:describeOrganization"
+                  - "sso:DescribeRegisteredRegions"
+                  - "servicecatalog:DisassociatePrincipalFromPortfolio"
+                  - "servicecatalog:AssociatePrincipalWithPortfolio"
+                Resource: "*"
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
         - arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
@@ -203,20 +205,20 @@ Resources:
       EventPattern:
         detail:
           eventName:
-          - CreateManagedAccount
+            - CreateManagedAccount
           eventSource:
-          - controltower.amazonaws.com
+            - controltower.amazonaws.com
         detail-type:
-        - AWS Service Event via CloudTrail
+          - AWS Service Event via CloudTrail
         source:
-        - aws.controltower
+          - aws.controltower
       State: ENABLED
       Targets:
-      - Arn: !GetAtt "CreateManagedAccountLambda.Arn"
-        Id: IDCaptureControlTowerLifeCycleEvents
+        - Arn: !GetAtt "CreateManagedAccountLambda.Arn"
+          Id: IDCaptureControlTowerLifeCycleEvents
   EventSourceMapping:
     Type: AWS::Lambda::EventSourceMapping
-    DependsOn: 
+    DependsOn:
       - NewAccountHandlerTriggerLambda
     Properties:
       EventSourceArn: !GetAtt
@@ -256,23 +258,46 @@ Resources:
       RestApiId: !Ref ApiGateway
       StageName: call
 
+  SignUpLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+            Condition: {}
+      Path: /
+      Policies:
+        - PolicyName: sign-up-lambda-policy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "dynamodb:GetItem"
+                  - "dynamodb:PutItem"
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                Resource: "*"
   SignUpLambdaFunction:
     Type: AWS::Lambda::Function
     Properties:
       Code:
         S3Bucket: !Sub ${S3BucketName}
-        S3Key: sign_up_lambda.zip
-      Description: Example Lambda function
-      FunctionName: !Ref lambdaFunctionName
-      Handler: index.handler
+        S3Key: sign_up_handler.zip
+      FunctionName: Sign-Up-Handler
+      Handler: sign_up_handler.lambda_handler
       MemorySize: 128
-      Role: !GetAtt LambdaIAMRole.Arn
+      Role: !GetAtt SignUpLambdaRole.Arn
       Runtime: python3.8
       Environment:
         Variables:
           TABLE_NAME:
             Ref: NewAccountDetailsTable
-          PRINCIPAL_ARN: !GetAtt "CreateManagedAccountLambdaRole.Arn"
 
   LambdaApiGatewayInvoke:
     Type: AWS::Lambda::Permission
@@ -280,7 +305,7 @@ Resources:
       Action: lambda:InvokeFunction
       FunctionName: !GetAtt SignUpLambdaFunction.Arn
       Principal: apigateway.amazonaws.com
-      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/call/POST/
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*/POST/
   LambdaIAMRole:
     Type: AWS::IAM::Role
     Properties:
@@ -301,8 +326,6 @@ Resources:
                   - logs:CreateLogGroup
                   - logs:CreateLogStream
                   - logs:PutLogEvents
-                  - dynamodb:PutItem
-                  - dynamodb:GetItem
                 Effect: Allow
                 Resource:
                   - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${lambdaFunctionName}:*
@@ -314,15 +337,15 @@ Resources:
       RetentionInDays: 90
   BudgetStackSet:
     Type: AWS::CloudFormation::StackSet
-    Properties: 
+    Properties:
       Description: Deploys a Stack Set which auto deploys a Budgets configuration to all accounts in the Organizational unit.
       StackInstancesGroup:
-        - DeploymentTargets: 
+        - DeploymentTargets:
             OrganizationalUnitIds:
               - !Sub ${OrganizationalUnitIds}
-          Regions: 
+          Regions:
             - !Sub ${AWS::Region}
-      AutoDeployment: 
+      AutoDeployment:
         Enabled: True
         RetainStacksOnAccountRemoval: True
       PermissionModel: SERVICE_MANAGED
@@ -360,14 +383,13 @@ Resources:
         Outputs:
           BudgetId:
             Value: !Ref BudgetBase
-
 Outputs:
   DynamoDBTableWithAccountInformation:
     Description: The DynamoDB table name
-    Value: !Sub 'https://console.aws.amazon.com/dynamodb/home?region=${AWS::Region}#tables:selected=${NewAccountDetailsTable}'
+    Value: !Sub "https://console.aws.amazon.com/dynamodb/home?region=${AWS::Region}#tables:selected=${NewAccountDetailsTable}"
   NewAccountHandlerLambda:
     Description: Lambda to validate the input file and load the data in to DynamoDB table
-    Value: !Sub 'https://console.aws.amazon.com/lambda/home?region=${AWS::Region}#/functions/${NewAccountHandlerLambda}'
+    Value: !Sub "https://console.aws.amazon.com/lambda/home?region=${AWS::Region}#/functions/${NewAccountHandlerLambda}"
   CreateManagedAccountLambda:
     Description: Lambda to create account from the DynamoDB table
-    Value: !Sub 'https://console.aws.amazon.com/lambda/home?region=${AWS::Region}#/functions/${NewAccountHandlerLambda}'
+    Value: !Sub "https://console.aws.amazon.com/lambda/home?region=${AWS::Region}#/functions/${NewAccountHandlerLambda}"
