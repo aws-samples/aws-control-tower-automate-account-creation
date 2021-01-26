@@ -13,7 +13,6 @@ Parameters:
     Default: ou-h1w5-gavt86rs
   AdminEmail:
     Type: String
-    Default: rob.dyke@capgemini.com
     Description: "Email address of the Administrator"
   S3BucketName:
     Type: String
