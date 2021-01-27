@@ -48,7 +48,7 @@ data "aws_iam_policy_document" "signup_validation_role_policy_doc" {
     ]
 
     resources = [
-      module.storage.users_table_arn
+      var.dynamodb_table
     ]
   }
 }
@@ -60,7 +60,7 @@ data "aws_iam_policy_document" "account_creation_role_policy_doc" {
       "sso:CreateApplicationInstance",
       "sso:ProvisionApplicationInstanceForAWSAccount",
       "sso:ProvisionApplicationProfileForAWSAccountInstance",
-      "sso:ProvisionSAMLProvider"
+      "sso:ProvisionSAMLProvider",
       "sso:ListPermissionSets",
       "sso:ListDirectoryAssociations",
       "sso:DescribeRegisteredRegions",

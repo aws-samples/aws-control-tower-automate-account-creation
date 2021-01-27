@@ -30,14 +30,21 @@ module "cloudwatch" {
 module "iam" {
   source = "./iam"
   prefix = local.prefix
+  dynamodb_table = module.storage.users_table_arn
 }
 
 module "lambda" {
   source = "./lambda"
   prefix = local.prefix
+  deployment_bucket = module.storage.deployment_bucket
+  signup_validation_role_arn = module.iam.signup_validation_role_arn
+  account_creation_role_arn = module.iam.account_creation_role_arn
+  signup_form_api_execution_arn = module.apigateway.signup_form_api_execution_arn
+  users_table_stream_arn = module.storage.users_table_stream_arn
 }
 
 module "storage" {
   source = "./storage"
   prefix = local.prefix
+  billing_mode = var.billing_mode
 }
