@@ -6,7 +6,7 @@ terraform {
   }
 }
 
-#Project Maykr
+#Project Maykr.
 
 provider "aws" {
   region = "eu-west-2"
