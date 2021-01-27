@@ -7,6 +7,12 @@ resource "aws_lambda_function" "signup_validation" {
   role = var.signup_validation_role_arn
   handler = "signup_validation.lambda_handler"
   runtime = "python3.8"
+
+  environment {
+    variables = {
+      TABLE_NAME = var.dynamodb_table_name
+    }
+  }
 }
 
 resource "aws_lambda_function" "account_creation" {
@@ -18,6 +24,12 @@ resource "aws_lambda_function" "account_creation" {
   role = var.account_creation_role_arn
   handler = "account_creation.lambda_handler"
   runtime = "python3.8"
+
+  environment {
+    variables = {
+      TABLE_NAME = var.dynamodb_table_name
+    }
+  }
 }
 
 resource "aws_lambda_permission" "invoke_account_creation" {

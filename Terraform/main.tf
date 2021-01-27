@@ -41,6 +41,7 @@ module "lambda" {
   account_creation_role_arn = module.iam.account_creation_role_arn
   signup_form_api_execution_arn = module.apigateway.signup_form_api_execution_arn
   users_table_stream_arn = module.storage.users_table_stream_arn
+  dynamodb_table_name = module.storage.dynamodb_table_name
 }
 
 module "storage" {

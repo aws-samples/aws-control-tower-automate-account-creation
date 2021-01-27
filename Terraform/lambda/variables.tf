@@ -25,3 +25,7 @@ variable "users_table_stream_arn" {
 variable "signup_form_api_execution_arn" {
   
 }
+
+variable "dynamodb_table_name" {
+  type = string
+}
