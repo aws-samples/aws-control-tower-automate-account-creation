@@ -2,6 +2,7 @@
 
 
 AWS Control Tower is an AWS managed service that automates the creation of a well-architected multi-account AWS environment. This simplifies new account provisioning and centralized compliance for your AWS Organization. With AWS Control Tower, builders can provision new AWS accounts that conform to your company-wide policies in a few clicks. Creating accounts using AWS Control Tower’s Account Factory is a single-threaded process at this point, customers must allow for the current account creation process to complete before they can begin the next account creation process.
+
 In this post, we demonstrate how you can automate the creation of multiple accounts in AWS Control Tower using a batch account creation process.  For example, you can use this solution to create a number of sandbox accounts for your application, or to create multiple accounts a new team. You can execute this batch process overnight or over a weekend, and when you return, your AWS Control Tower accounts are ready for use. The batch account creation process is also designed to handle some common mistakes that you may make when creating new accounts in AWS Control Tower.    
 
 This solution uses the following AWS services:
