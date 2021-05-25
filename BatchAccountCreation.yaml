@@ -1,25 +1,15 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: Control Tower Batch Account Creation (fdp-1p4ekfxow)
 Parameters:
-  URLForInputCSVFile:
-    Default: 'https://marketplace-sa-resources-ct-us-east-1.s3.amazonaws.com/sample.csv'
-    Description: URL for Batch Account Creation CSV file.
-    NoEcho: 'false'
+  S3BucketName:
+    Default: 'YOUR-BUCKET-NAME'
+    Description: Your Amazon S3 Bucket Name.
     Type: String
-    AllowedPattern: ^[a-zA-Z0-9-.\\:\/]*.csv$
+  S3KeyName:
+    Default: 'sample.csv'
+    Description: Amazon S3 key file.
+    Type: String
 
-Mappings:
-  S3perRegion:
-    us-east-1:
-      NAME: marketplace-sa-resources-ct-us-east-1
-    us-east-2:
-      NAME: marketplace-sa-resources-ct-us-east-2
-    us-west-2:
-      NAME: marketplace-sa-resources-ct-us-west-2
-    eu-west-1:
-      NAME: marketplace-sa-resources-ct-eu-west-1
-    ap-southeast-2:
-      NAME: marketplace-sa-resources-ct-ap-southeast-2
 
 Resources:
   NewAccountDetailsTable:
@@ -49,7 +39,11 @@ Resources:
               Service: lambda.amazonaws.com
         Version: "2012-10-17"
       ManagedPolicyArns:
-        - Fn::Sub: 'arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+        - Fn::Join:
+            - ":"
+            - - "arn"
+              - Ref: AWS::Partition
+              - iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
   NewAccountHandlerPolicy:
     Type: AWS::IAM::Policy
     Properties:
@@ -83,7 +77,7 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       Code:
-        S3Bucket: !FindInMap [ S3perRegion, !Ref "AWS::Region", NAME ]
+        S3Bucket: !Join ['-', ['marketplace-sa-resources-ct', !Ref "AWS::Region"]]
         S3Key: ct_batchcreation_lambda.zip
       Handler: new_account_handler.account_handler
       Role:
@@ -95,20 +89,24 @@ Resources:
         Variables:
           TABLE_NAME:
             Ref: NewAccountDetailsTable
-          BATCH_ACCT_INPUT:
-            Ref: URLForInputCSVFile
+          BATCH_BUCKET_NAME:
+            Ref: S3BucketName
+          BATCH_KEY_NAME:
+            Ref: S3KeyName
       Timeout: 300
     DependsOn:
       - NewAccountHandlerPolicy
+
   NewAccountHandlerTriggerLambda:
     Type: 'Custom::AccountHandler'
     Properties:
       ServiceToken: !GetAtt "NewAccountHandlerLambda.Arn"
+
   CreateManagedAccountLambda:
     Type: AWS::Lambda::Function
     Properties:
       Code:
-        S3Bucket: !FindInMap [ S3perRegion, !Ref "AWS::Region", NAME ]
+        S3Bucket: !Join ['-', ['marketplace-sa-resources-ct', !Ref "AWS::Region"]]
         S3Key: ct_account_create_lambda.zip
       Handler: account_create.lambda_handler
       MemorySize: 128
@@ -121,12 +119,14 @@ Resources:
             Ref: NewAccountDetailsTable
           PRINCIPAL_ARN:
             !GetAtt "CreateManagedAccountLambdaRole.Arn"
+
   TargetLambdaTrigger:
     Type: 'Custom::CreateAccount'
     DependsOn:
       - EventSourceMapping
     Properties:
       ServiceToken: !GetAtt "CreateManagedAccountLambda.Arn"
+
   PermissionForEventsToInvokeLambdachk:
     Type: AWS::Lambda::Permission
     Properties:
@@ -134,6 +134,7 @@ Resources:
       FunctionName: !GetAtt "CreateManagedAccountLambda.Arn"
       Principal: events.amazonaws.com
       SourceArn: !GetAtt "CaptureControlTowerLifeCycleEvents.Arn"
+
   CreateManagedAccountLambdaRole:
     Type: AWS::IAM::Role
     Properties:
@@ -156,16 +157,17 @@ Resources:
                   - 'sso:GetProfile'
                   - 'sso:CreateProfile'
                   - 'sso:UpdateProfile'
+                  - 'sso:AssociateProfile'
+                  - 'sso:CreateApplicationInstance'
                   - 'sso:GetSSOStatus'
                   - 'sso:GetTrust'
                   - 'sso:CreateTrust'
                   - 'sso:UpdateTrust'
+                  - 'sso:GetPeregrineStatus'
                   - 'sso:GetApplicationInstance'
                   - 'sso:ListDirectoryAssociations'
                   - 'sso:ListPermissionSets'
-                  - 'sso:AssociateProfile'
                   - 'sso:GetPermissionSet'
-                  - 'sso:CreateApplicationInstance'
                   - 'sso:ProvisionApplicationInstanceForAWSAccount'
                   - 'sso:ProvisionApplicationProfileForAWSAccountInstance'
                   - 'sso:ProvisionSAMLProvider'
@@ -191,7 +193,7 @@ Resources:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
         - arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
         - arn:aws:iam::aws:policy/CloudWatchLogsFullAccess
-        - arn:aws:iam::aws:policy/AWSOrganizationsReadOnlyAccess
+        - arn:aws:iam::aws:policy/AWSOrganizationsFullAccess
         - arn:aws:iam::aws:policy/CloudWatchEventsFullAccess
         - arn:aws:iam::aws:policy/AWSServiceCatalogAdminReadOnlyAccess
         - arn:aws:iam::aws:policy/AWSServiceCatalogEndUserFullAccess
@@ -213,6 +215,7 @@ Resources:
       Targets:
       - Arn: !GetAtt "CreateManagedAccountLambda.Arn"
         Id: IDCaptureControlTowerLifeCycleEvents
+
   EventSourceMapping:
     Type: AWS::Lambda::EventSourceMapping
     DependsOn: 

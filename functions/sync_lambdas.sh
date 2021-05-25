@@ -13,7 +13,7 @@ echo "======== === ====="
 zip -r ct_batchcreation_lambda.zip new_account_handler.py cfnresource.py 
 zip -r ct_account_create_lambda.zip account_create.py cfnresource.py
 echo
-for region in us-east-1 us-east-2 us-west-2 eu-west-1 ap-southeast-2
+for region in $(aws ec2 describe-regions --query 'Regions[*].RegionName' --output text)
 do
 echo "Copying to $region"
 echo "======= == ========="
