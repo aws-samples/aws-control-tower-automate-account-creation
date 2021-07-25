@@ -38,12 +38,21 @@ Resources:
             Principal:
               Service: lambda.amazonaws.com
         Version: "2012-10-17"
+      Policies:
+        - PolicyName: S3ReadAccess
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Sid: '1'
+                Action:
+                  - s3:GetObject
+                  - s3:GetObjectAcl
+                Effect: Allow
+                Resource:
+                  - !Sub arn:${AWS::Partition}:s3:::${S3BucketName}
+                  - !Sub arn:${AWS::Partition}:s3:::${S3BucketName}/${S3KeyName}
       ManagedPolicyArns:
-        - Fn::Join:
-            - ":"
-            - - "arn"
-              - Ref: AWS::Partition
-              - iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
   NewAccountHandlerPolicy:
     Type: AWS::IAM::Policy
     Properties:
@@ -80,10 +89,7 @@ Resources:
         S3Bucket: !Join ['-', ['marketplace-sa-resources-ct', !Ref "AWS::Region"]]
         S3Key: ct_batchcreation_lambda.zip
       Handler: new_account_handler.account_handler
-      Role:
-        Fn::GetAtt:
-          - NewAccountHandlerLambdaExecutionRole
-          - Arn
+      Role: !GetAtt NewAccountHandlerLambdaExecutionRole.Arn
       Runtime: python3.7
       Environment:
         Variables:
