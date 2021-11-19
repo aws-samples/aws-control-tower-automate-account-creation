@@ -28,6 +28,7 @@ import logging
 import csv
 from urllib.request import urlopen
 import boto3
+from botocore.exceptions import ClientError
 import cfnresource
 
 LOGGER = logging.getLogger()
@@ -48,7 +49,7 @@ def dyno_scan(table_name):
     try:
         dyno_paginator = DYNO.get_paginator('scan')
         dyno_page_iterator = dyno_paginator.paginate(TableName=table_name)
-    except Exception as exe:
+    except ClientError as exe:
         LOGGER.error('Unable to scan the table: %s', str(exe))
 
     for page in dyno_page_iterator:
@@ -78,7 +79,7 @@ def list_org_roots():
 
     try:
         root_info = ORG.list_roots()
-    except Exception as exe:
+    except ClientError as exe:
         LOGGER.error('Allowed only on Organizations root: %s', str(exe))
 
     if 'Roots' in root_info:
@@ -100,7 +101,7 @@ def list_of_ous():
         org_paginator = ORG.get_paginator(
             'list_organizational_units_for_parent')
         org_page_iterator = org_paginator.paginate(ParentId=root_id)
-    except Exception as exe:
+    except ClientError as exe:
         LOGGER.error('Unable to get Accounts list: %s', str(exe))
 
     for page in org_page_iterator:
@@ -110,6 +111,72 @@ def list_of_ous():
         account_list.append(item['Name'])
 
     return account_list
+
+
+def list_ou_names():
+    '''
+    Return list of OU Names
+    '''
+
+    return get_ou_map().values()
+
+
+def list_children(parent_id, c_type='ORGANIZATIONAL_UNIT'):
+    '''
+    List all children for a OU
+    '''
+
+    result = list()
+
+    try:
+        paginator = ORG.get_paginator('list_children')
+        iterator = paginator.paginate(ParentId=parent_id,
+                                     ChildType=c_type)
+    except ClientError as exe:
+        LOGGER.error('Unable to get children: %s', str(exe))
+
+    for page in iterator:
+        result += page['Children']
+
+    return result
+
+
+def get_child_ous(prev_level):
+    '''
+    Return all child OUs
+    '''
+
+    result = list()
+
+    for item in prev_level:
+        child = list_children(item['Id'])
+        if len(child) > 0:
+            result += list_children(item['Id'])
+
+    return result
+
+def get_ou_map():
+    '''
+    Return ou-id:ou-name mapping dict
+    '''
+
+    ou_map = dict()
+    root_id=list_org_roots()
+    lvl_one = list_children(root_id)
+    lvl_two = get_child_ous(lvl_one)
+    lvl_three = get_child_ous(lvl_two)
+    lvl_four = get_child_ous(lvl_three)
+    lvl_five = get_child_ous(lvl_four)
+    result = lvl_one + lvl_two + lvl_three + lvl_four + lvl_five
+
+
+    for item in result:
+        ou_id=item['Id']
+        ou_info=ORG.describe_organizational_unit(OrganizationalUnitId=ou_id)
+        ou_name=ou_info['OrganizationalUnit']['Name']
+        ou_map[ou_id] = ou_name
+
+    return ou_map
 
 
 def list_of_accounts():
@@ -123,7 +190,7 @@ def list_of_accounts():
     try:
         org_paginator = ORG.get_paginator('list_accounts_for_parent')
         org_page_iterator = org_paginator.paginate(ParentId=root_id)
-    except Exception as exe:
+    except ClientError as exe:
         LOGGER.error('Unable to get Accounts list: %s', str(exe))
 
     for page in org_page_iterator:
@@ -139,9 +206,10 @@ def validate_org_unit(org_unit):
     '''Return True if Org exists'''
 
     orgexist = False
-    ou_list = list_of_ous()
+    ou_list = list_ou_names()
+    ou_name = org_unit.split('(ou-')[0].rstrip()
 
-    if org_unit in ou_list:
+    if ou_name in ou_list:
         orgexist = True
 
     return orgexist
@@ -210,7 +278,7 @@ def read_file(name, key_name='sample.csv', method='s3'):
             result = file.read().decode('utf-8')
         else:
             raise Exception('UNSUPPORTED_METHOD')
-    except Exception as exe:
+    except ClientError as exe:
         LOGGER.error('Unable to read the file/url: %s', str(exe))
 
     return result
@@ -238,7 +306,7 @@ def validate_update_dyno(content, table_name):
                 },
                 TableName=table_name,
                 )
-        except Exception as exe:
+        except ClientError as exe:
             LOGGER.error('Unable to update the table: %s', str(exe))
 
     return response

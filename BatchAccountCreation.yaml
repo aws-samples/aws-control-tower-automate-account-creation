@@ -76,6 +76,8 @@ Resources:
               - organizations:ListRoots
               - organizations:ListAccountsForParent
               - organizations:ListOrganizationalUnitsForParent
+              - organizations:ListChildren
+              - organizations:DescribeOrganizationalUnit
             Effect: Allow
             Resource: '*'
         Version: "2012-10-17"
