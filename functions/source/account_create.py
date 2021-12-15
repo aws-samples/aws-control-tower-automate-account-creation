@@ -26,7 +26,6 @@ import os
 from time import sleep
 from random import randint
 import boto3
-import cfnresource
 
 LOGGER = logging.getLogger()
 LOGGER.setLevel(logging.INFO)
@@ -358,39 +357,17 @@ def get_pp_status(pp_id):
 
     return(status, message)
 
-
-def process_cft_event(event):
-    '''Handle the initial trigger from Cloudformation'''
-
-    create_new_account = False
-    LOGGER.info('Lambda Event: %s', event)
-    request_type = event['RequestType']
-    if request_type == 'Create':
-        create_new_account = True
-    elif request_type == 'Delete':
-        prod_id = get_product_id()
-        port_id = get_portfolio_id(prod_id)
-        disassociate_principal_portfolio(PRINCIPAL_ARN, port_id)
-    else:
-        LOGGER.info('%s request received. No action taken', request_type)
-
-    return create_new_account
-
-
 def process_dynamodb_event(event):
-    '''Skip INSERT operation to avoid race condition with Lambda trigger'''
 
-    result = False
     event_name = event['Records'][0]['eventName']
 
-    if event_name != 'INSERT':
+    if event_name == 'INSERT':
         LOGGER.info('DynamoDB Event Recieved: %s', event)
-        result = True
+        return True
     else:
         LOGGER.info('DynamoDB %s received. No action taken', event_name)
-        result = False
 
-    return result
+    return False
 
 
 def process_lifecycle_event(event):
@@ -421,10 +398,7 @@ def lambda_handler(event, context):
     pp_id = None
     create_new_account = False
 
-    if 'RequestType' in event:
-        event_source = 'cloudformation'
-        create_new_account = process_cft_event(event)
-    elif 'Records' in event:
+    if 'Records' in event:
         event_source = 'dynamodb'
         create_new_account = process_dynamodb_event(event)
     elif event['source'] == 'aws.controltower':
@@ -461,8 +435,3 @@ def lambda_handler(event, context):
         else:
             sc_initial_failure(input_params, pp_id)
             LOGGER.info('SC Product Launch Failed: %s', input_params)
-
-    if event_source == 'cloudformation':
-        response = {}
-        cfnresource.send(event, context, cfnresource.SUCCESS,
-                         response, "CustomResourcePhysicalID")
