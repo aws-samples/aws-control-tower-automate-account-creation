@@ -10,7 +10,7 @@ Parameters:
     Description: Amazon S3 key file.
     Type: String
   SourceCodeBucketName:
-    Default: 'marketplace-sa-resources-ct'
+    Default: 'marketplace-sa-resources-ct-us-east-1'
     Description: Amazon S3 key file.
     Type: String
 
@@ -30,8 +30,8 @@ Resources:
         WriteCapacityUnits: 10
       StreamSpecification:
         StreamViewType: NEW_AND_OLD_IMAGES
-    UpdateReplacePolicy: Delete
-    DeletionPolicy: Delete
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain
   NewAccountHandlerLambdaExecutionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -78,6 +78,7 @@ Resources:
           - Action:
               - organizations:ListAccountsForParent
               - organizations:ListRoots
+              - organizations:ListAccounts
               - organizations:ListAccountsForParent
               - organizations:ListOrganizationalUnitsForParent
               - organizations:ListChildren
@@ -92,7 +93,7 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       Code:
-        S3Bucket: !Join ['-', [Ref: SourceCodeBucketName, !Ref "AWS::Region"]]
+        S3Bucket: !Ref SourceCodeBucketName
         S3Key: ct_batchcreation_lambda.zip
       Handler: new_account_handler.account_handler
       Role: !GetAtt NewAccountHandlerLambdaExecutionRole.Arn
@@ -121,7 +122,7 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       Code:
-        S3Bucket: !Join ['-', [Ref: SourceCodeBucketName, !Ref "AWS::Region"]]
+        S3Bucket: !Ref SourceCodeBucketName
         S3Key: ct_account_create_lambda.zip
       Handler: account_create.lambda_handler
       MemorySize: 128
@@ -226,8 +227,6 @@ Resources:
 
   EventSourceMapping:
     Type: AWS::Lambda::EventSourceMapping
-    DependsOn: 
-      - NewAccountHandlerTriggerLambda
     Properties:
       EventSourceArn: !GetAtt
         - NewAccountDetailsTable
@@ -245,12 +244,14 @@ Outputs:
       Name: NewAccountDetailsTable
   NewAccountHandlerLambdaArn:
     Description: New Accouunt Handler Arn
-    Value: Fn::GetAtt: NewAccountHandlerLambda.Arn
+    Value: 
+      Fn::GetAtt: NewAccountHandlerLambda.Arn
     Export:
       Name: NewAccountHandlerLambdaArn
   CreateManagedAccountLambdaArn:
     Description: Create Managed Account Lambda Arn
-    Value: Fn::GetAtt: CreateManagedAccountLambda.Arn
+    Value: 
+      Fn::GetAtt: CreateManagedAccountLambda.Arn
     Export:
       Name: CreateManagedAccountLambdaArn  
   DynamoDBTableWithAccountInformation:

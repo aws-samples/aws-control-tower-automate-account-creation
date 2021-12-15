@@ -73,7 +73,7 @@ def get_items(status):
     '''Get list of Valid entries to be provisioned'''
 
     result = list()
-    items = dyno_scan(TABLE_NAME)
+    items = dyno_scan()
 
     for item in items:
         if item['Status']['S'] == status:
@@ -189,11 +189,11 @@ def list_of_accounts():
 
     account_list = list()
 
-    root_id = list_org_roots()
+    # root_id = list_org_roots()
 
     try:
-        org_paginator = ORG.get_paginator('list_accounts_for_parent')
-        org_page_iterator = org_paginator.paginate(ParentId=root_id)
+        org_paginator = ORG.get_paginator('list_accounts')
+        org_page_iterator = org_paginator.paginate()
     except ClientError as exe:
         LOGGER.error('Unable to get Accounts list: %s', str(exe))
 
@@ -218,32 +218,21 @@ def is_email_exists(email):
     '''Return True if email exists in current organization'''
 
     accounts = list_of_accounts()
-    filtered = list(
-        filter(
-            lambda account:
-                account['Email'] == email,
-            accounts
-    ))
-
-    if len(filtered) > 0:
+    for account in accounts:
+     if account['Email'] == email:
         return True
+
     return False
 
 def is_existing_account(email, accountName):
     '''Return True if specified input matches with any existing account in current organization'''
 
     accounts = list_of_accounts()
-    filtered = list(
-        filter(
-            lambda account:
-                account['Email'] == email and account['Name'] == accountName,
-            accounts
-        )
-    )
-
-    if len(filtered) > 0:
-        return True
+    for account in accounts:
+        if account['Email'] == email and account['Name'] == accountName:
+            return True
     return False
+
 
 def validateinput(row):
     '''Return validation status and error list if found any'''
