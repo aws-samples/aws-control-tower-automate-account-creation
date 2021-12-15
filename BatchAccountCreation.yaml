@@ -9,10 +9,6 @@ Parameters:
     Default: 'sample.csv'
     Description: Amazon S3 key file.
     Type: String
-  SourceCodeBucketName:
-    Default: 'marketplace-sa-resources-ct-us-east-1'
-    Description: Amazon S3 key file.
-    Type: String
 
 
 Resources:
@@ -93,7 +89,7 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       Code:
-        S3Bucket: !Ref SourceCodeBucketName
+        S3Bucket: !Join ['-', ['marketplace-sa-resources-ct', !Ref "AWS::Region"]]
         S3Key: ct_batchcreation_lambda.zip
       Handler: new_account_handler.account_handler
       Role: !GetAtt NewAccountHandlerLambdaExecutionRole.Arn
@@ -122,7 +118,7 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       Code:
-        S3Bucket: !Ref SourceCodeBucketName
+        S3Bucket: !Join ['-', ['marketplace-sa-resources-ct', !Ref "AWS::Region"]]
         S3Key: ct_account_create_lambda.zip
       Handler: account_create.lambda_handler
       MemorySize: 128

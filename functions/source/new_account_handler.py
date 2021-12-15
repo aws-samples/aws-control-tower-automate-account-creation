@@ -39,20 +39,6 @@ TABLE_NAME = os.environ.get("TABLE_NAME")
 BUCKET_NAME = os.environ.get("BATCH_BUCKET_NAME")
 KEY_NAME = os.environ.get("BATCH_KEY_NAME")
 
-# def get_item_from_table(q_key, q_value):
-#     '''Return true if Value exists'''
-
-#     try:
-#         response = DYNO.get_item(TableName=TABLE_NAME,
-#             Key={q_key: {'S': q_value}}
-#         )
-#     except ClientError as exe:
-#         LOGGER.error('Unable to query the table: %s', str(exe))
-
-#     if len(response['Item']) > 0:
-#         return True
-#     return False
-
 def dyno_scan():
     '''Return list of OUs in the organization'''
 
