@@ -24,21 +24,32 @@ This solution uses the following AWS services:
 
 ![Solution Architecture](images/SolutionArchitecture.png)
 
+## Prerequisites
+
+**Step-1**: Configure a s3 bucket to upload accounts to be provisioned in a `.csv` format
+
+**Step-2**: Configure a s3 trigger on the `s3:ObjectCreated:*` event to target the lambda `NewAccountHandlerLambda` provisioned by this CF stack.
+
 ## Steps 
 
 Steps 1–2 describe the initiation, while steps 3–8 describe the core of the batch account creation process.
 
-**Step-1**:  Log in as the AWS Control Tower administrator, and deploy an AWS CloudFormation stack. You also upload provide an input file that contains the details of the accounts that you want to create in AWS Control Tower. These details are listed later in the blog.
+**Step-1**:  Log in as the AWS Control Tower administrator, and deploy an AWS CloudFormation stack. 
 
-**Step-2**:  When the stack is successfully deployed, it performs the following actions to set up the batch process.
+**Step-2** You also upload provide an input file that contains the details of the accounts that you want to create in AWS Control Tower. These details are listed later in the blog.
+
+**Step-2**:  When the stack is successfully deployed, it performs the following actions:
 
 **Step-2a**: It creates an Amazon DynamoDB table.  This table tracks the account creation status.
 
-***Step-2b, 2c***: It creates an AWS Lambda function, NewAccountHandlerLambda.  This function validates the input file entries (see Step-1), and uploads the validated input file entries to the DynamoDB table.
+***Step-2b***: It creates an AWS Lambda function, NewAccountHandlerLambda.  
 
-***Step-2d***: It creates an Amazon CloudWatch Events rule that to detect the AWS Control Tower CreateManagedAccount lifecycle event.
+This function when triggered reads s3 file entries and uploads the validated input file entries to the DynamoDB table. 
+It will skip any entries already in dynamo db when recursively invoked
 
-***Step-2e***: It creates and triggers a Lambda function, CreateManagedAccountLambda.  This function initiates the batch account creation process.
+***Step-2c***: It creates an Amazon CloudWatch Events rule that to detect the AWS Control Tower CreateManagedAccount lifecycle event.
+
+***Step-2d***: It creates CreateManagedAccountLambda.  This function watches for any dynamo db inserts and initiates the account creation process.
 
 **Step-3**: The CreateManagedAccountLambda queries the DynamoDB table to get the details of the next account to be created.  If there is another account to be created, then the batch account creation process moves on to Step-4, else it completes.
 
@@ -50,7 +61,7 @@ Steps 1–2 describe the initiation, while steps 3–8 describe the core of the 
 
 **Step-7**: The CreateManagedAccountLambda function updates the DynamoDB table with the results of the account creation workflow.  If the account was successfully created, it updates the input file entry in the DynamoDB table with the account ID, else it updates the entry in the table with the appropriate failure or error reason.
 
-**Step-8**: When the DynamoDB table is updated, the DynamoDB stream triggers the CreateManagedAccountLambda function, and steps 3–7 are repeated.    
+**Step-8**: When the S3 object is updated, the NewAccountHandlerLambda reads the updated s3 file and steps 2c-7 are repeated.    
 
 
 ## Security
