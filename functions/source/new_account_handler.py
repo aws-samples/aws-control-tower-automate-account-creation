@@ -29,7 +29,6 @@ import csv
 from urllib.request import urlopen
 import boto3
 from botocore.exceptions import ClientError
-import cfnresource
 
 LOGGER = logging.getLogger()
 LOGGER.setLevel(logging.INFO)
@@ -40,15 +39,28 @@ TABLE_NAME = os.environ.get("TABLE_NAME")
 BUCKET_NAME = os.environ.get("BATCH_BUCKET_NAME")
 KEY_NAME = os.environ.get("BATCH_KEY_NAME")
 
+# def get_item_from_table(q_key, q_value):
+#     '''Return true if Value exists'''
 
-def dyno_scan(table_name):
+#     try:
+#         response = DYNO.get_item(TableName=TABLE_NAME,
+#             Key={q_key: {'S': q_value}}
+#         )
+#     except ClientError as exe:
+#         LOGGER.error('Unable to query the table: %s', str(exe))
+
+#     if len(response['Item']) > 0:
+#         return True
+#     return False
+
+def dyno_scan():
     '''Return list of OUs in the organization'''
 
     result = list()
 
     try:
         dyno_paginator = DYNO.get_paginator('scan')
-        dyno_page_iterator = dyno_paginator.paginate(TableName=table_name)
+        dyno_page_iterator = dyno_paginator.paginate(TableName=TABLE_NAME)
     except ClientError as exe:
         LOGGER.error('Unable to scan the table: %s', str(exe))
 
@@ -56,7 +68,6 @@ def dyno_scan(table_name):
         result += page['Items']
 
     return result
-
 
 def get_items(status):
     '''Get list of Valid entries to be provisioned'''
@@ -69,7 +80,6 @@ def get_items(status):
             result.append(item)
 
     return result
-
 
 def list_org_roots():
     '''List organization roots'''
@@ -88,7 +98,6 @@ def list_org_roots():
         LOGGER.error('Unable to find valid root: %s ', root_info)
 
     return value
-
 
 def list_of_ous():
     '''Return list of OUs in the organization'''
@@ -112,14 +121,12 @@ def list_of_ous():
 
     return account_list
 
-
 def list_ou_names():
     '''
     Return list of OU Names
     '''
 
     return get_ou_map().values()
-
 
 def list_children(parent_id, c_type='ORGANIZATIONAL_UNIT'):
     '''
@@ -139,7 +146,6 @@ def list_children(parent_id, c_type='ORGANIZATIONAL_UNIT'):
         result += page['Children']
 
     return result
-
 
 def get_child_ous(prev_level):
     '''
@@ -178,11 +184,9 @@ def get_ou_map():
 
     return ou_map
 
-
 def list_of_accounts():
     '''Return list of accounts in the organization'''
 
-    result = list()
     account_list = list()
 
     root_id = list_org_roots()
@@ -194,13 +198,9 @@ def list_of_accounts():
         LOGGER.error('Unable to get Accounts list: %s', str(exe))
 
     for page in org_page_iterator:
-        result += page['Accounts']
-
-    for item in result:
-        account_list.append(item['Email'])
+        account_list += page['Accounts']
 
     return account_list
-
 
 def validate_org_unit(org_unit):
     '''Return True if Org exists'''
@@ -214,23 +214,42 @@ def validate_org_unit(org_unit):
 
     return orgexist
 
-
 def is_email_exists(email):
     '''Return True if email exists in current organization'''
 
-    emailexist = False
-    email_list = list_of_accounts()
+    accounts = list_of_accounts()
+    filtered = list(
+        filter(
+            lambda account:
+                account['Email'] == email,
+            accounts
+    ))
 
-    if email in email_list:
-        emailexist = True
-    return emailexist
+    if len(filtered) > 0:
+        return True
+    return False
 
+def is_existing_account(email, accountName):
+    '''Return True if specified input matches with any existing account in current organization'''
+
+    accounts = list_of_accounts()
+    filtered = list(
+        filter(
+            lambda account:
+                account['Email'] == email and account['Name'] == accountName,
+            accounts
+        )
+    )
+
+    if len(filtered) > 0:
+        return True
+    return False
 
 def validateinput(row):
     '''Return validation status and error list if found any'''
 
     error_list = list()
-    validation = 'VALID'
+
     emailexpression = r'[^\s@]+@[^\s@]+\.[^\s@]+'
     fields = ['AccountName', 'AccountEmail', 'SSOUserEmail',
               'OrgUnit', 'SSOUserFirstName', 'SSOUserLastName']
@@ -239,28 +258,41 @@ def validateinput(row):
         if row[field] == 'None':
             error_list.append(field + "is a required field.")
 
-    if len(row['AccountName']) > 50:
-        error_list.append("AccountName should be less than 50 characters., ")
-    if len(row['AccountEmail']) < 7:
-        error_list.append("AccountEmail should be more than 6 characters., ")
-    if len(row['SSOUserEmail']) < 7:
-        error_list.append("SSOUserEmail should be more than 6 characters., ")
-    if re.match(emailexpression, row['AccountEmail']) is None:
-        error_list.append("AccountEmail is not valid., ")
-    if re.match(emailexpression, row['SSOUserEmail']) is None:
-        error_list.append("SSOUserEmail is not valid., ")
-    if not validate_org_unit(row['OrgUnit']):
-        error_list.append("OrgUnit " + row['OrgUnit'] + " is not valid")
-    if is_email_exists(row['AccountEmail']):
-        error_list.append("Account email - " + row['AccountEmail']
+    
+    if is_existing_account(row['AccountEmail'], row['AccountName']):
+        LOGGER.warn("Account email - " + row['AccountEmail'] 
+            + " and Account Name - " + row['AccountName'] 
+            + " already exists")
+        cmd_status = 'ALREADY_EXISTS' # Don't update dynamo db table for existing accounts. Leave as is
+        return ('ALREADY_EXISTS', error_list)
+    else:
+        if len(row['AccountName']) > 50:
+            error_list.append("AccountName should be less than 50 characters., ")
+        if len(row['AccountEmail']) < 7:
+            error_list.append("AccountEmail should be more than 6 characters., ")
+        if len(row['SSOUserEmail']) < 7:
+            error_list.append("SSOUserEmail should be more than 6 characters., ")
+        if re.match(emailexpression, row['AccountEmail']) is None:
+            error_list.append("AccountEmail is not valid., ")
+        if re.match(emailexpression, row['SSOUserEmail']) is None:
+            error_list.append("SSOUserEmail is not valid., ")
+        if not validate_org_unit(row['OrgUnit']):
+            error_list.append("OrgUnit " + row['OrgUnit'] + " is not valid")
+        if is_email_exists(row['AccountEmail']):
+            # check if requested email is already in use for someother account
+            error_list.append("Account email - " + row['AccountEmail']
                           + " in use by another account")
 
     if len(error_list) > 0:
-        validation = 'INVALID'
+        cmd_status = 'INVALID'
         LOGGER.info('Validation status %s and error message %s ',
-                    validation, error_list)
-
-    return (validation, error_list)
+                    cmd_status, error_list)
+    else:
+        cmd_status = 'VALID'
+        LOGGER.info('Validation status %s',
+                    cmd_status)
+    
+    return (cmd_status, error_list)
 
 
 def read_file(name, key_name='sample.csv', method='s3'):
@@ -290,21 +322,23 @@ def validate_update_dyno(content, table_name):
     response = False
 
     for row in csv.DictReader(content.splitlines()):
-        (validation, errormsg) = validateinput(row)
+        (cmd_status, errormsg) = validateinput(row)
         try:
-            response = DYNO.put_item(
-                Item={
-                    'AccountName': {'S': row['AccountName'], },
-                    'SSOUserEmail': {'S': row['SSOUserEmail'], },
-                    'AccountEmail': {'S': row['AccountEmail'], },
-                    'SSOUserFirstName': {'S': row['SSOUserFirstName'], },
-                    'SSOUserLastName': {'S': row['SSOUserLastName'], },
-                    'OrgUnit': {'S': row['OrgUnit'], },
-                    'Status': {'S': validation},
-                    'AccountId': {'S': 'UNKNOWN'},
-                    'Message': {'S': str(errormsg)}
-                },
-                TableName=table_name,
+            # Only update dynamo db for new valid / invalid account entries
+            if cmd_status == 'VALID' or cmd_status == 'INVALID':
+                response = DYNO.put_item(
+                    Item={
+                        'AccountName': {'S': row['AccountName'], },
+                        'SSOUserEmail': {'S': row['SSOUserEmail'], },
+                        'AccountEmail': {'S': row['AccountEmail'], },
+                        'SSOUserFirstName': {'S': row['SSOUserFirstName'], },
+                        'SSOUserLastName': {'S': row['SSOUserLastName'], },
+                        'OrgUnit': {'S': row['OrgUnit'], },
+                        'Status': {'S': cmd_status},
+                        'AccountId': {'S': 'UNKNOWN'},
+                        'Message': {'S': str(errormsg)}
+                    },
+                    TableName=table_name,
                 )
         except ClientError as exe:
             LOGGER.error('Unable to update the table: %s', str(exe))
@@ -315,28 +349,19 @@ def validate_update_dyno(content, table_name):
 def account_handler(event, context):
     '''Lambda Handler'''
 
-    result = False
+    # Read S3 contents
+    fcontent = read_file(BUCKET_NAME, KEY_NAME)
 
-    if event['RequestType'] == 'Create':
-        fcontent = read_file(BUCKET_NAME, KEY_NAME)
+    if fcontent:
+        update_response = validate_update_dyno(fcontent, TABLE_NAME)
 
-        if fcontent:
-            update_response = validate_update_dyno(fcontent, TABLE_NAME)
+        if update_response:
+            LOGGER.info(update_response)
+                
 
-            if update_response:
-                result = True
-
-            if len(get_items('INVALID')) > 0:
+        if len(get_items('INVALID')) > 0:
                 LOGGER.warning('INVALID Entries: %s', get_items('INVALID'))
-    else:
-        result = True
-
-    if result is True:
-        response = {}
-        cfnresource.send(event, context, cfnresource.SUCCESS,
-                         response, "CustomResourcePhysicalID")
+        
     else:
         response = {"error": "Failed to load the data"}
         LOGGER.error(response)
-        cfnresource.send(event, context, cfnresource.FAILED,
-                         response, "CustomResourcePhysicalID")

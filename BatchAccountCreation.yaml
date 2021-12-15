@@ -9,6 +9,10 @@ Parameters:
     Default: 'sample.csv'
     Description: Amazon S3 key file.
     Type: String
+  SourceCodeBucketName:
+    Default: 'marketplace-sa-resources-ct'
+    Description: Amazon S3 key file.
+    Type: String
 
 
 Resources:
@@ -88,7 +92,7 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       Code:
-        S3Bucket: !Join ['-', ['marketplace-sa-resources-ct', !Ref "AWS::Region"]]
+        S3Bucket: !Join ['-', [Ref: SourceCodeBucketName, !Ref "AWS::Region"]]
         S3Key: ct_batchcreation_lambda.zip
       Handler: new_account_handler.account_handler
       Role: !GetAtt NewAccountHandlerLambdaExecutionRole.Arn
@@ -105,16 +109,19 @@ Resources:
     DependsOn:
       - NewAccountHandlerPolicy
 
-  NewAccountHandlerTriggerLambda:
-    Type: 'Custom::AccountHandler'
+  PermissionForEventsToInvokeNewAccountLambdachk:
+    Type: AWS::Lambda::Permission
     Properties:
-      ServiceToken: !GetAtt "NewAccountHandlerLambda.Arn"
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt "NewAccountHandlerLambda.Arn"
+      Principal: "s3.amazonaws.com"
+      SourceArn: !Join ["", ["arn:aws:s3:::", Ref: S3BucketName ]]
 
   CreateManagedAccountLambda:
     Type: AWS::Lambda::Function
     Properties:
       Code:
-        S3Bucket: !Join ['-', ['marketplace-sa-resources-ct', !Ref "AWS::Region"]]
+        S3Bucket: !Join ['-', [Ref: SourceCodeBucketName, !Ref "AWS::Region"]]
         S3Key: ct_account_create_lambda.zip
       Handler: account_create.lambda_handler
       MemorySize: 128
@@ -127,13 +134,6 @@ Resources:
             Ref: NewAccountDetailsTable
           PRINCIPAL_ARN:
             !GetAtt "CreateManagedAccountLambdaRole.Arn"
-
-  TargetLambdaTrigger:
-    Type: 'Custom::CreateAccount'
-    DependsOn:
-      - EventSourceMapping
-    Properties:
-      ServiceToken: !GetAtt "CreateManagedAccountLambda.Arn"
 
   PermissionForEventsToInvokeLambdachk:
     Type: AWS::Lambda::Permission
@@ -238,8 +238,23 @@ Resources:
       StartingPosition: LATEST
 
 Outputs:
+  DynamoDBTable:
+    Description: The Dynamo DB table name
+    Value: !Ref NewAccountDetailsTable
+    Export:
+      Name: NewAccountDetailsTable
+  NewAccountHandlerLambdaArn:
+    Description: New Accouunt Handler Arn
+    Value: Fn::GetAtt: NewAccountHandlerLambda.Arn
+    Export:
+      Name: NewAccountHandlerLambdaArn
+  CreateManagedAccountLambdaArn:
+    Description: Create Managed Account Lambda Arn
+    Value: Fn::GetAtt: CreateManagedAccountLambda.Arn
+    Export:
+      Name: CreateManagedAccountLambdaArn  
   DynamoDBTableWithAccountInformation:
-    Description: The DynamoDB table name
+    Description: The URL to Dynamo DB table
     Value: !Sub 'https://console.aws.amazon.com/dynamodb/home?region=${AWS::Region}#tables:selected=${NewAccountDetailsTable}'
   NewAccountHandlerLambda:
     Description: Lambda to validate the input file and load the data in to DynamoDB table
