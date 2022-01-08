@@ -26,8 +26,8 @@ Resources:
         WriteCapacityUnits: 10
       StreamSpecification:
         StreamViewType: NEW_AND_OLD_IMAGES
-    UpdateReplacePolicy: Delete
-    DeletionPolicy: Delete
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain
   NewAccountHandlerLambdaExecutionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -74,6 +74,7 @@ Resources:
           - Action:
               - organizations:ListAccountsForParent
               - organizations:ListRoots
+              - organizations:ListAccounts
               - organizations:ListAccountsForParent
               - organizations:ListOrganizationalUnitsForParent
               - organizations:ListChildren
@@ -105,10 +106,13 @@ Resources:
     DependsOn:
       - NewAccountHandlerPolicy
 
-  NewAccountHandlerTriggerLambda:
-    Type: 'Custom::AccountHandler'
+  PermissionForEventsToInvokeNewAccountLambdachk:
+    Type: AWS::Lambda::Permission
     Properties:
-      ServiceToken: !GetAtt "NewAccountHandlerLambda.Arn"
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt "NewAccountHandlerLambda.Arn"
+      Principal: "s3.amazonaws.com"
+      SourceArn: !Join ["", ["arn:aws:s3:::", Ref: S3BucketName ]]
 
   CreateManagedAccountLambda:
     Type: AWS::Lambda::Function
@@ -127,13 +131,6 @@ Resources:
             Ref: NewAccountDetailsTable
           PRINCIPAL_ARN:
             !GetAtt "CreateManagedAccountLambdaRole.Arn"
-
-  TargetLambdaTrigger:
-    Type: 'Custom::CreateAccount'
-    DependsOn:
-      - EventSourceMapping
-    Properties:
-      ServiceToken: !GetAtt "CreateManagedAccountLambda.Arn"
 
   PermissionForEventsToInvokeLambdachk:
     Type: AWS::Lambda::Permission
@@ -226,8 +223,6 @@ Resources:
 
   EventSourceMapping:
     Type: AWS::Lambda::EventSourceMapping
-    DependsOn: 
-      - NewAccountHandlerTriggerLambda
     Properties:
       EventSourceArn: !GetAtt
         - NewAccountDetailsTable
@@ -238,8 +233,25 @@ Resources:
       StartingPosition: LATEST
 
 Outputs:
+  DynamoDBTable:
+    Description: The Dynamo DB table name
+    Value: !Ref NewAccountDetailsTable
+    Export:
+      Name: NewAccountDetailsTable
+  NewAccountHandlerLambdaArn:
+    Description: New Accouunt Handler Arn
+    Value: 
+      Fn::GetAtt: NewAccountHandlerLambda.Arn
+    Export:
+      Name: NewAccountHandlerLambdaArn
+  CreateManagedAccountLambdaArn:
+    Description: Create Managed Account Lambda Arn
+    Value: 
+      Fn::GetAtt: CreateManagedAccountLambda.Arn
+    Export:
+      Name: CreateManagedAccountLambdaArn  
   DynamoDBTableWithAccountInformation:
-    Description: The DynamoDB table name
+    Description: The URL to Dynamo DB table
     Value: !Sub 'https://console.aws.amazon.com/dynamodb/home?region=${AWS::Region}#tables:selected=${NewAccountDetailsTable}'
   NewAccountHandlerLambda:
     Description: Lambda to validate the input file and load the data in to DynamoDB table
