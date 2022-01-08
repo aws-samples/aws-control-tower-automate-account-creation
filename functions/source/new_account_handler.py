@@ -188,11 +188,10 @@ def list_of_accounts():
 
     return account_list
 
-def validate_org_unit(org_unit):
+def validate_org_unit(org_unit, ou_list):
     '''Return True if Org exists'''
 
     orgexist = False
-    ou_list = list_ou_names()
     ou_name = org_unit.split('(ou-')[0].rstrip()
 
     if ou_name in ou_list:
@@ -200,27 +199,39 @@ def validate_org_unit(org_unit):
 
     return orgexist
 
-def is_email_exists(email):
+def is_email_exists(email, accounts):
     '''Return True if email exists in current organization'''
 
-    accounts = list_of_accounts()
     for account in accounts:
      if account['Email'] == email:
         return True
 
     return False
 
-def is_existing_account(email, accountName):
-    '''Return True if specified input matches with any existing account in current organization'''
+def is_existing_account(email, accountName, existing_accounts, unique_accounts):
+    '''Return True if specified input matches with any existing account in current organization and any duplicate input entry'''
+    
+    key = (email, accountName)
+    is_duplicate = check_duplicates(email, accountName, unique_accounts)
 
-    accounts = list_of_accounts()
-    for account in accounts:
-        if account['Email'] == email and account['Name'] == accountName:
-            return True
+    if not is_duplicate:
+        for account in existing_accounts:
+            if account['Email'] == email and account['Name'] == accountName:
+                return True
     return False
 
+def check_duplicates(key, unique_accounts):
+    '''Return True if specified input row matches with any other input row with same email and account name'''
+    if key in unique_accounts:
+        LOGGER.warn("Account email - " + key['email'] 
+            + " and Account Name - " + key['accountName']
+            + " is a duplicate entry in the input")
+        return True
+    else:
+        return False
+        
 
-def validateinput(row):
+def validateinput(row, existing_accounts, ou_list, unique_accounts):
     '''Return validation status and error list if found any'''
 
     error_list = list()
@@ -234,7 +245,8 @@ def validateinput(row):
             error_list.append(field + "is a required field.")
 
     
-    if is_existing_account(row['AccountEmail'], row['AccountName']):
+    if is_existing_account(row['AccountEmail'], row['AccountName'], existing_accounts, unique_accounts):
+    
         LOGGER.warn("Account email - " + row['AccountEmail'] 
             + " and Account Name - " + row['AccountName'] 
             + " already exists")
@@ -251,9 +263,9 @@ def validateinput(row):
             error_list.append("AccountEmail is not valid., ")
         if re.match(emailexpression, row['SSOUserEmail']) is None:
             error_list.append("SSOUserEmail is not valid., ")
-        if not validate_org_unit(row['OrgUnit']):
+        if not validate_org_unit(row['OrgUnit'], ou_list):
             error_list.append("OrgUnit " + row['OrgUnit'] + " is not valid")
-        if is_email_exists(row['AccountEmail']):
+        if is_email_exists(row['AccountEmail'], existing_accounts):
             # check if requested email is already in use for someother account
             error_list.append("Account email - " + row['AccountEmail']
                           + " in use by another account")
@@ -264,9 +276,9 @@ def validateinput(row):
                     cmd_status, error_list)
     else:
         cmd_status = 'VALID'
+        unique_accounts.add(row['AccountEmail'], row['AccountName'])
         LOGGER.info('Validation status %s',
                     cmd_status)
-    
     return (cmd_status, error_list)
 
 
@@ -296,8 +308,13 @@ def validate_update_dyno(content, table_name):
 
     response = False
 
+    existing_accounts = list_of_accounts()
+    unique_accounts = set()
+    ou_list = list_ou_names()
+
+
     for row in csv.DictReader(content.splitlines()):
-        (cmd_status, errormsg) = validateinput(row)
+        (cmd_status, errormsg) = validateinput(row, existing_accounts, ou_list, unique_accounts)
         try:
             # Only update dynamo db for new valid / invalid account entries
             if cmd_status == 'VALID' or cmd_status == 'INVALID':
