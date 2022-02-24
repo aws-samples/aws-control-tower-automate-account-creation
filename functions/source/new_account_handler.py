@@ -202,11 +202,12 @@ def list_of_accounts():
     return account_list
 
 
-def validate_org_unit(org_unit):
+def validate_org_unit(org_unit, ou_list=None):
     '''Return True if Org exists'''
 
     orgexist = False
-    ou_list = list_ou_names()
+    if not ou_list:
+        ou_list = list_ou_names()
     ou_name = org_unit.split('(ou-')[0].rstrip()
 
     if ou_name in ou_list:
@@ -226,7 +227,7 @@ def is_email_exists(email):
     return emailexist
 
 
-def validateinput(row):
+def validateinput(row, ou_info=None):
     '''Return validation status and error list if found any'''
 
     error_list = list()
@@ -249,7 +250,7 @@ def validateinput(row):
         error_list.append("AccountEmail is not valid., ")
     if re.match(emailexpression, row['SSOUserEmail']) is None:
         error_list.append("SSOUserEmail is not valid., ")
-    if not validate_org_unit(row['OrgUnit']):
+    if not validate_org_unit(row['OrgUnit'], ou_info):
         error_list.append("OrgUnit " + row['OrgUnit'] + " is not valid")
     if is_email_exists(row['AccountEmail']):
         error_list.append("Account email - " + row['AccountEmail']
@@ -270,6 +271,7 @@ def read_file(name, key_name='sample.csv', method='s3'):
     result = None
     try:
         if method == 's3':
+            LOGGER.info('METHOD: %s', method)
             body = SSS.get_object(Bucket=name,
                                   Key=key_name)['Body']
             result = body.read().decode('utf-8')
@@ -288,9 +290,12 @@ def validate_update_dyno(content, table_name):
     '''Validate and update dyno table'''
 
     response = False
+    ou_info = list_ou_names()
 
     for row in csv.DictReader(content.splitlines()):
-        (validation, errormsg) = validateinput(row)
+        (validation, errormsg) = validateinput(row, ou_info)
+        LOGGER.info('Inserting Row: %s in %s, %s',
+                    row['AccountName'], row['OrgUnit'], str(errormsg))
         try:
             response = DYNO.put_item(
                 Item={
@@ -321,6 +326,7 @@ def account_handler(event, context):
         fcontent = read_file(BUCKET_NAME, KEY_NAME)
 
         if fcontent:
+            LOGGER.info('Updating DynamoDB: %s', TABLE_NAME)
             update_response = validate_update_dyno(fcontent, TABLE_NAME)
 
             if update_response:

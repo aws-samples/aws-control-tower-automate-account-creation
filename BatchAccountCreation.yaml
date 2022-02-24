@@ -101,7 +101,7 @@ Resources:
             Ref: S3BucketName
           BATCH_KEY_NAME:
             Ref: S3KeyName
-      Timeout: 300
+      Timeout: 900
     DependsOn:
       - NewAccountHandlerPolicy
 
