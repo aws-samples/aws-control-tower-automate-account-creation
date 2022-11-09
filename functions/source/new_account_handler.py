@@ -72,7 +72,9 @@ def get_items(status):
 
 
 def list_org_roots():
-    '''List organization roots'''
+    '''
+    List organization roots
+    '''
 
     value = None
     root_info = list()
@@ -91,7 +93,9 @@ def list_org_roots():
 
 
 def list_of_ous():
-    '''Return list of OUs in the organization'''
+    '''
+    Return list of OUs in the organization
+    '''
 
     result = list()
     account_list = list()
@@ -169,7 +173,6 @@ def get_ou_map():
     lvl_five = get_child_ous(lvl_four)
     result = lvl_one + lvl_two + lvl_three + lvl_four + lvl_five
 
-
     for item in result:
         ou_id=item['Id']
         ou_info=ORG.describe_organizational_unit(OrganizationalUnitId=ou_id)
@@ -180,7 +183,9 @@ def get_ou_map():
 
 
 def list_of_accounts():
-    '''Return list of accounts in the organization'''
+    '''
+    Return list of accounts in the organization
+    '''
 
     result = list()
     account_list = list()
@@ -203,11 +208,14 @@ def list_of_accounts():
 
 
 def validate_org_unit(org_unit, ou_list=None):
-    '''Return True if Org exists'''
+    '''
+    Return True if Org exists
+    '''
 
     orgexist = False
     if not ou_list:
         ou_list = list_ou_names()
+
     ou_name = org_unit.split('(ou-')[0].rstrip()
 
     if ou_name in ou_list:
@@ -217,7 +225,9 @@ def validate_org_unit(org_unit, ou_list=None):
 
 
 def is_email_exists(email):
-    '''Return True if email exists in current organization'''
+    '''
+    Return True if email exists in current organization
+    '''
 
     emailexist = False
     email_list = list_of_accounts()
@@ -228,7 +238,9 @@ def is_email_exists(email):
 
 
 def validateinput(row, ou_info=None):
-    '''Return validation status and error list if found any'''
+    '''
+    Return validation status and error list if found any
+    '''
 
     error_list = list()
     validation = 'VALID'
@@ -265,7 +277,9 @@ def validateinput(row, ou_info=None):
 
 
 def read_file(name, key_name='sample.csv', method='s3'):
-    '''Return file content if exist'''
+    '''
+    Return file content if exist
+    '''
 
     LOGGER.info('BUCKET NAME: %s, KEY NAME: %s', name, key_name)
     result = None
@@ -274,10 +288,10 @@ def read_file(name, key_name='sample.csv', method='s3'):
             LOGGER.info('METHOD: %s', method)
             body = SSS.get_object(Bucket=name,
                                   Key=key_name)['Body']
-            result = body.read().decode('utf-8')
+            result = body.read().decode('utf-8-sig')
         elif method == 'https':
             file = urlopen(name)
-            result = file.read().decode('utf-8')
+            result = file.read().decode('utf-8-sig')
         else:
             raise Exception('UNSUPPORTED_METHOD')
     except ClientError as exe:
@@ -287,7 +301,9 @@ def read_file(name, key_name='sample.csv', method='s3'):
 
 
 def validate_update_dyno(content, table_name):
-    '''Validate and update dyno table'''
+    '''
+    Validate and update dyno table
+    '''
 
     response = False
     ou_info = list_ou_names()
@@ -318,7 +334,9 @@ def validate_update_dyno(content, table_name):
 
 
 def account_handler(event, context):
-    '''Lambda Handler'''
+    '''
+    Lambda Handler
+    '''
 
     result = False
 
