@@ -1,6 +1,5 @@
 #!/bin/bash
 BUCKET_PREFIX=${1:-"marketplace-sa-resources-ct"}
-PROFILE=${2:-default}
 echo
 echo "new_account_handler.py"
 echo "======================"
@@ -19,7 +18,7 @@ for region in $(aws ec2 describe-regions --query 'Regions[*].RegionName' --outpu
 do
 echo "Copying to $region"
 echo "======= == ========="
-aws s3 cp ct_account_create_lambda.zip s3://${BUCKET_PREFIX}-${region}/ --acl public-read --profile ${PROFILE}
-aws s3 cp ct_batchcreation_lambda.zip s3://${BUCKET_PREFIX}-${region}/ --acl public-read --profile ${PROFILE}
+aws s3 cp ct_account_create_lambda.zip s3://${BUCKET_PREFIX}-${region}/ --acl public-read 
+aws s3 cp ct_batchcreation_lambda.zip s3://${BUCKET_PREFIX}-${region}/ --acl public-read 
 echo
 done
