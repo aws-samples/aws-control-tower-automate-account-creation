@@ -92,7 +92,7 @@ Resources:
         S3Key: ct_batchcreation_lambda.zip
       Handler: new_account_handler.account_handler
       Role: !GetAtt NewAccountHandlerLambdaExecutionRole.Arn
-      Runtime: python3.7
+      Runtime: python3.12
       Environment:
         Variables:
           TABLE_NAME:
@@ -119,7 +119,7 @@ Resources:
       Handler: account_create.lambda_handler
       MemorySize: 128
       Role: !GetAtt "CreateManagedAccountLambdaRole.Arn"
-      Runtime: python3.7
+      Runtime: python3.12
       Timeout: 300
       Environment:
         Variables:
