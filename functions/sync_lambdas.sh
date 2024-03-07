@@ -20,5 +20,6 @@ echo "Copying to $region"
 echo "======= == ========="
 aws s3 cp ct_account_create_lambda.zip s3://${BUCKET_PREFIX}-${region}/ --acl public-read 
 aws s3 cp ct_batchcreation_lambda.zip s3://${BUCKET_PREFIX}-${region}/ --acl public-read 
+aws s3 cp ../../BatchAccountCreation.yaml s3://${BUCKET_PREFIX}-${region}/ --acl public-read
 echo
 done
